@@ -1,0 +1,155 @@
+version: '3.8'
+
+services:
+
+  outline:
+    image: docker.getoutline.com/outlinewiki/outline:latest
+    env_file: ./docker.env
+    ports:
+      - "3000:3000"
+    volumes:
+      - outline-data:/var/lib/outline/data
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - outline-app
+  redis:
+    image: redis
+    env_file: ./docker.env
+    hostname: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis.conf:/redis.conf
+    command: [ "redis-server", "/redis.conf" ]
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 30s
+      retries: 3
+    networks:
+      - outline-app
+
+  postgres:
+    image: postgres:13
+    env_file: ./docker.env
+    hostname: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - database-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-d", "outline", "-U", "dattb" ]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    environment:
+      POSTGRES_USER: 'dattb'
+      POSTGRES_PASSWORD: 'dattb123'
+      POSTGRES_DB: 'outline'
+    networks:
+      - outline-app
+  https-portal:
+    image: steveltn/https-portal
+    env_file: ./docker.env
+    ports:
+      - '80:80'
+      - '443:443'
+    links:
+      - outline
+    restart: always
+    volumes:
+      - https-portal-data:/var/lib/https-portal
+    healthcheck:
+      test: [ "CMD", "service", "nginx", "status" ]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    environment:
+      DOMAINS: 'localhost -> http://outline:3000'
+      STAGE: 'local'
+      WEBSOCKET: 'true'
+      CLIENT_MAX_BODY_SIZE: '0'
+    networks:
+      - outline-app
+
+#  mysql:
+#    image: debezium/example-mysql:latest
+#    container_name: mysql
+#    hostname: mysql-keycloak
+#    environment:
+#      MYSQL_ROOT_PASSWORD: root
+#      MYSQL_DATABASE: keycloak
+#      MYSQL_USER: keycloak
+#      MYSQL_PASSWORD: keycloak
+#      MYSQL_ROOT_HOST: '%'
+#      MYSQL_AUTHENTICATION_PLUGIN: mysql_native_password
+#    ports:
+#      - 3306:3306
+#    volumes:
+#      - mysql-data:/var/lib/mysql
+#    networks:
+#      - outline-app
+#  keycloak:
+#    build:
+#      context: .
+#      dockerfile: Dockerfile
+#    container_name: keycloak
+#    environment:
+#      #      - KEYCLOAK_USER=admin
+#      #      - KEYCLOAK_PASSWORD=admin
+#      #      - DB_VENDOR=MYSQL
+#      #      - DB_ADDR=mysql-keycloak
+#      #      - DB_DATABASE=keycloak
+#      #      - DB_PORT=3306
+#      #      - DB_USER=keycloak
+#      #      - DB_PASSWORD=keycloak
+#      - KEYCLOAK_ADMIN=admin
+#      - KEYCLOAK_ADMIN_PASSWORD=admin
+#
+#    ports:
+#      - 8080:8080
+#    command:
+#      - start-dev
+#    volumes:
+#      - keycloak-data:/opt/jboss/keycloak/standalone/data
+#    networks:
+#      - outline-app
+#    depends_on:
+#      - mysql
+volumes:
+  outline-data:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: 'C:\\Users\\HLC\\Documents\\docker-mount\\image-data\\outline\\outline-data'
+  database-data:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: 'C:\\Users\\HLC\\Documents\\docker-mount\\image-data\\postgre'
+  https-portal-data:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: 'C:\\Users\\HLC\\Documents\\docker-mount\\image-data\\outline\\nginx'
+#  keycloak-data:
+#    driver: local
+#    driver_opts:
+#      type: 'none'
+#      o: 'bind'
+#      device: 'C:\\Users\\HLC\\Documents\\docker-mount\\image-data\\keycloak-date'
+#  mysql-data:
+#    driver: local
+#    driver_opts:
+#      type: 'none'
+#      o: 'bind'
+#      device: 'C:\\Users\\HLC\\Documents\\docker-mount\\image-data\\mysql-data'
+
+networks:
+  outline-app:
+    driver: bridge
