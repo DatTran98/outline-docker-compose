@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+
+  mysql:
+    image: debezium/example-mysql:latest
+    container_name: mysql
+    hostname: mysql-keycloak
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: keycloak
+      MYSQL_USER: keycloak
+      MYSQL_PASSWORD: keycloak
+      MYSQL_ROOT_HOST: '%'
+      MYSQL_AUTHENTICATION_PLUGIN: caching_sha2_password
+    ports:
+      - 3306:3306
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - outline-app
+  keycloak:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: keycloak
+    environment:
+      #      - KEYCLOAK_USER=admin
+      #      - KEYCLOAK_PASSWORD=admin
+      #      - DB_VENDOR=MYSQL
+      #      - DB_ADDR=mysql-keycloak
+      #      - DB_DATABASE=keycloak
+      #      - DB_PORT=3306
+      #      - DB_USER=keycloak
+      #      - DB_PASSWORD=keycloak
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_HOSTNAME_STRICT=true
+      - KC_HOSTNAME_STRICT_BACKCHANNEL=true
+      - KC_HOSTNAME=localhost
+      - KC_HTTP_ENABLED=false
+      - KC_HTTPS_PORT=8443
+    #      - KC_FRONTEND_URL=https://my-domain.com
+    #      - KC_ADMIN_URL=https://my-domain.com/auth
+
+    ports:
+      - 8080:8080
+      - 8443:8443
+    command:
+      - start-dev
+    #for production
+    #      - --verbose
+    #      - start
+    #      - --optimized
+    volumes:
+      - keycloak-data:/opt/jboss/keycloak/standalone/data
+    networks:
+      - outline-app
+    depends_on:
+      - mysql
+volumes:
+
+  keycloak-data:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: 'C:\\Users\\HLC\\Documents\\docker-mount\\image-data\\keycloak-date'
+  mysql-data:
+    driver: local
+    driver_opts:
+      type: 'none'
+      o: 'bind'
+      device: 'C:\\Users\\HLC\\Documents\\docker-mount\\image-data\\mysql-data'
+
+networks:
+  outline-app:
+
+#https://github.com/heyValdemar/outline-keycloak-traefik-letsencrypt-docker-compose
+#https://wenkdth.org/posts/keycloak-outline-setup/
